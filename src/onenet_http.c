@@ -28,6 +28,17 @@
 
 #include <onenet.h>
 
+#define DBG_ENABLE
+#define DBG_COLOR
+#define DBG_SECTION_NAME    "onenet.http"
+#if ONENET_DEBUG
+#define DBG_LEVEL           DBG_LOG
+#else
+#define DBG_LEVEL           DBG_INFO
+#endif /* ONENET_DEBUG */
+
+#include <rtdbg.h>
+
 #define ONENET_SEND_DATA_LEN           1024
 #define ONENET_HEAD_DATA_LEN           256
 #define ONENET_CON_URI_LEN             256
@@ -44,7 +55,7 @@
     {                                                                                                   \
         if (webclient_header_fields_add(session, fmt, ##__VA_ARGS__) < 0)                               \
         {                                                                                               \
-            log_e("webclient add header failed!");                                                      \
+            LOG_E("webclient add header failed!");                                                      \
             goto __exit;                                                                                \
         }                                                                                               \
     } while(0);                                                                                         \
@@ -58,12 +69,12 @@ static rt_err_t onenet_upload_data(char *send_buffer)
     char *URI = RT_NULL;
     rt_err_t result = RT_EOK;
 
-    assert(send_buffer);
+    RT_ASSERT(send_buffer);
 
     URI = ONENET_CALLOC(1, ONENET_CON_URI_LEN);
     if (URI == RT_NULL)
     {
-        log_e("OneNet Send data failed! No memory for URI buffer!");
+        LOG_E("OneNet Send data failed! No memory for URI buffer!");
         result = -RT_ENOMEM;
         goto __exit;
     }
@@ -87,7 +98,7 @@ static rt_err_t onenet_upload_data(char *send_buffer)
         goto __exit;
     }
 
-    log_d("buffer : %.*s", strlen(buffer), buffer);
+    LOG_D("buffer : %.*s", strlen(buffer), buffer);
 
 __exit:
     if (session)
@@ -108,14 +119,14 @@ static rt_err_t onenet_get_string_data(const char *ds_name, const char *str, cha
     rt_err_t result = RT_EOK;
     cJSON *root = RT_NULL;
 
-    assert(ds_name);
-    assert(str);
-    assert(out_buff);
+    RT_ASSERT(ds_name);
+    RT_ASSERT(str);
+    RT_ASSERT(out_buff);
 
     root = cJSON_CreateObject();
     if (!root)
     {
-        log_e("onenet publish string data failed! cJSON create object error return NULL!");
+        LOG_E("onenet publish string data failed! cJSON create object error return NULL!");
         return -RT_ENOMEM;
     }
 
@@ -125,7 +136,7 @@ static rt_err_t onenet_get_string_data(const char *ds_name, const char *str, cha
     *out_buff = cJSON_PrintUnformatted(root);
     if (!(*out_buff))
     {
-        log_e("onenet publish string data failed! cJSON print unformatted error return NULL!");
+        LOG_E("onenet publish string data failed! cJSON print unformatted error return NULL!");
         result = -RT_ENOMEM;
         goto __exit;
     }
@@ -144,13 +155,13 @@ static rt_err_t onenet_get_digit_data(const char *ds_name, const double digit, c
     rt_err_t result = RT_EOK;
     cJSON *root = RT_NULL;
 
-    assert(ds_name);
-    assert(out_buff);
+    RT_ASSERT(ds_name);
+    RT_ASSERT(out_buff);
 
     root = cJSON_CreateObject();
     if (!root)
     {
-        log_e("onenet publish digit data failed! cJSON create object error return NULL!");
+        LOG_E("onenet publish digit data failed! cJSON create object error return NULL!");
         return -RT_ENOMEM;
     }
 
@@ -160,7 +171,7 @@ static rt_err_t onenet_get_digit_data(const char *ds_name, const double digit, c
     *out_buff = cJSON_PrintUnformatted(root);
     if (!(*out_buff))
     {
-        log_e("onenet publish digit data failed! cJSON print unformatted error return NULL!");
+        LOG_E("onenet publish digit data failed! cJSON print unformatted error return NULL!");
         result = -RT_ENOMEM;
         goto __exit;
     }
@@ -188,7 +199,7 @@ rt_err_t onenet_http_upload_digit(const char *ds_name, const double digit)
     char *send_buffer = RT_NULL;
     rt_err_t result = RT_EOK;
 
-    assert(ds_name);
+    RT_ASSERT(ds_name);
 
     /* get JSON format data */
     result = onenet_get_digit_data(ds_name, digit, &send_buffer);
@@ -227,8 +238,8 @@ rt_err_t onenet_http_upload_string(const char *ds_name, const char *str)
     char *send_buffer = RT_NULL;
     rt_err_t result = RT_EOK;
 
-    assert(ds_name);
-    assert(str);
+    RT_ASSERT(ds_name);
+    RT_ASSERT(str);
 
     /* get JSON format data */
     result = onenet_get_string_data(ds_name, str, &send_buffer);
@@ -261,14 +272,14 @@ static rt_err_t response_register_handlers(const unsigned char *rec_buf, const s
     cJSON *itemid = RT_NULL;
     cJSON *itemapikey = RT_NULL;
 
-    assert(rec_buf);
+    RT_ASSERT(rec_buf);
 
-    log_d("response is %.*s", length, rec_buf);
+    LOG_D("response is %.*s", length, rec_buf);
 
     root = cJSON_Parse((char *)rec_buf);
     if (!root)
     {
-        log_e("onenet register device failed! cJSON Parse data error return NULL!");
+        LOG_E("onenet register device failed! cJSON Parse data error return NULL!");
         return -RT_ENOMEM;
     }
 
@@ -282,7 +293,7 @@ static rt_err_t response_register_handlers(const unsigned char *rec_buf, const s
     }
     else
     {
-        log_e("onenet register device failed! errno is %d", item->valueint);
+        LOG_E("onenet register device failed! errno is %d", item->valueint);
         return -RT_ERROR;
     }
 
@@ -300,7 +311,7 @@ static rt_err_t onenet_upload_register_device(char *send_buffer)
     unsigned char *rec_buf;
     rt_err_t result = RT_EOK;
 
-    assert(send_buffer);
+    RT_ASSERT(send_buffer);
 
     session = webclient_session_create(ONENET_HTTP_HEAD_LEN);
     if (session == RT_NULL)
@@ -312,7 +323,7 @@ static rt_err_t onenet_upload_register_device(char *send_buffer)
     URI = (char *) ONENET_CALLOC(1, ONENET_CON_URI_LEN);
     if (URI == RT_NULL)
     {
-        log_e("OneNet register device failed! No memory for URI buffer!");
+        LOG_E("OneNet register device failed! No memory for URI buffer!");
         result = -RT_ENOMEM;
         goto __exit;
     }
@@ -320,7 +331,7 @@ static rt_err_t onenet_upload_register_device(char *send_buffer)
     rec_buf = (unsigned char *) ONENET_CALLOC(1, ONENET_RECV_RESP_LEN);
     if (rec_buf == RT_NULL)
     {
-        log_e("OneNet register device failed! No memory for response data buffer!");
+        LOG_E("OneNet register device failed! No memory for response data buffer!");
         result = -RT_ENOMEM;
         goto __exit;
     }
@@ -346,7 +357,7 @@ static rt_err_t onenet_upload_register_device(char *send_buffer)
     }
     else
     {
-        log_e("OneNet register device failed! Handle response(%d) error!", session->resp_status);
+        LOG_E("OneNet register device failed! Handle response(%d) error!", session->resp_status);
     }
 
 __exit:
@@ -371,14 +382,14 @@ static rt_err_t onenet_get_register_device_data(const char *ds_name, const char 
     cJSON *root = RT_NULL;
     char *msg_str = RT_NULL;
 
-    assert(ds_name);
-    assert(auth_info);
-    assert(out_buff);
+    RT_ASSERT(ds_name);
+    RT_ASSERT(auth_info);
+    RT_ASSERT(out_buff);
 
     root = cJSON_CreateObject();
     if (!root)
     {
-        log_e("MQTT register device failed! cJSON create object error return NULL!");
+        LOG_E("MQTT register device failed! cJSON create object error return NULL!");
         return -RT_ENOMEM;
     }
 
@@ -389,7 +400,7 @@ static rt_err_t onenet_get_register_device_data(const char *ds_name, const char 
     msg_str = cJSON_PrintUnformatted(root);
     if (!msg_str)
     {
-        log_e("Device register device failed! cJSON print unformatted error return NULL!");
+        LOG_E("Device register device failed! cJSON print unformatted error return NULL!");
         result = -RT_ENOMEM;
         goto __exit;
     }
@@ -423,13 +434,13 @@ rt_err_t onenet_http_register_device(const char *name, const char *auth_info)
     char *send_buffer = RT_NULL;
     rt_err_t result = RT_EOK;
 
-    assert(name);
-    assert(auth_info);
+    RT_ASSERT(name);
+    RT_ASSERT(auth_info);
 
     send_buffer = (char *) ONENET_CALLOC(1, ONENET_SEND_DATA_LEN);
     if (!send_buffer)
     {
-        log_e("ONENET register device failed! No memory for send buffer!");
+        LOG_E("ONENET register device failed! No memory for send buffer!");
         return -RT_ENOMEM;
     }
 
@@ -464,12 +475,12 @@ static cJSON *response_get_datapoints_handlers(const uint8_t *rec_buf)
     cJSON *itemdata = RT_NULL ;
     cJSON *item = RT_NULL;
 
-    assert(rec_buf);
+    RT_ASSERT(rec_buf);
 
     root = cJSON_Parse((char *) rec_buf);
     if (!root)
     {
-        log_e("MQTT processing response data failed! cJSON Parse data error return NULL!");
+        LOG_E("MQTT processing response data failed! cJSON Parse data error return NULL!");
 
         return RT_NULL;
     }
@@ -482,7 +493,7 @@ static cJSON *response_get_datapoints_handlers(const uint8_t *rec_buf)
     }
     else
     {
-        log_e("get datapoints failed! errno is %d", item->valueint);
+        LOG_E("get datapoints failed! errno is %d", item->valueint);
     }
 
     if (root)
@@ -502,19 +513,19 @@ static cJSON *onenet_http_get_datapoints(char *datastream, char *start, char *en
     cJSON *itemdata = RT_NULL;
     size_t res_len = 0;
 
-    assert(datastream);
+    RT_ASSERT(datastream);
 
     URI = (char *) ONENET_CALLOC(1, ONENET_CON_URI_LEN);
     if (URI == RT_NULL)
     {
-        log_e("OneNet Send data failed! No memory for URI buffer!");
+        LOG_E("OneNet Send data failed! No memory for URI buffer!");
         goto __exit;
     }
 
     rec_buf = (unsigned char *) ONENET_CALLOC(1, ONENET_RECV_RESP_LEN);
     if (rec_buf == RT_NULL)
     {
-        log_e("OneNet recvice response data failed! No memory for response data buffer!");
+        LOG_E("OneNet recvice response data failed! No memory for response data buffer!");
         goto __exit;
     }
 
@@ -563,7 +574,7 @@ static cJSON *onenet_http_get_datapoints(char *datastream, char *start, char *en
 
     if (res_len > ONENET_HTTP_HEAD_LEN)
     {
-        log_e("response data length(%d) is greater than the default recv buffer size(%d)!", res_len, ONENET_RECV_RESP_LEN);
+        LOG_E("response data length(%d) is greater than the default recv buffer size(%d)!", res_len, ONENET_RECV_RESP_LEN);
         goto __exit;
     }
     else if (webclient_read(session, rec_buf, ONENET_RECV_RESP_LEN) > 0)
@@ -603,7 +614,7 @@ __exit:
  */
 cJSON *onenet_get_dp_by_limit(char *ds_name, size_t limit)
 {
-    assert(ds_name);
+    RT_ASSERT(ds_name);
 
     return onenet_http_get_datapoints(ds_name, RT_NULL, RT_NULL, RT_NULL, limit);
 }
@@ -625,7 +636,7 @@ cJSON *onenet_get_dp_by_start_end(char *ds_name, uint32_t start, uint32_t end, s
     char start_buf[ONENET_TIME_BUF_LEN] = { 0 }, end_buf[ONENET_TIME_BUF_LEN] = { 0 };
     struct tm *cur_tm;
 
-    assert(ds_name);
+    RT_ASSERT(ds_name);
 
     time_t time = (time_t)(start + 8 * 60 * 60);
 
@@ -662,7 +673,7 @@ cJSON *onenet_get_dp_by_start_duration(char *ds_name, uint32_t start, size_t dur
     struct tm *cur_tm;
     char start_buf[ONENET_TIME_BUF_LEN] = { 0 };
 
-    assert(ds_name);
+    RT_ASSERT(ds_name);
 
     time_t time = (time_t)(start + 8 * 60 * 60);
 
@@ -683,13 +694,13 @@ static rt_err_t response_get_datastreams_handlers(const unsigned char *rec_buf, 
     cJSON *itemarray = RT_NULL;
     rt_err_t result = RT_EOK;
 
-    assert(rec_buf);
-    assert(datastream);
+    RT_ASSERT(rec_buf);
+    RT_ASSERT(datastream);
 
     root = cJSON_Parse((char *) rec_buf);
     if (!root)
     {
-        log_e("onenet get datastreams failed! cJSON Parse data error return NULL!");
+        LOG_E("onenet get datastreams failed! cJSON Parse data error return NULL!");
         return -RT_ENOMEM;
     }
 
@@ -736,7 +747,7 @@ static rt_err_t response_get_datastreams_handlers(const unsigned char *rec_buf, 
     }
     else
     {
-        log_e("onenet get datastreams failed! errno is %d", item->valueint);
+        LOG_E("onenet get datastreams failed! errno is %d", item->valueint);
         result = -RT_ERROR;
     }
 
@@ -767,13 +778,13 @@ rt_err_t onenet_http_get_datastream(const char *ds_name, struct rt_onenet_ds_inf
     rt_err_t result = RT_EOK;
     size_t res_len = 0;
 
-    assert(ds_name);
-    assert(datastream);
+    RT_ASSERT(ds_name);
+    RT_ASSERT(datastream);
 
     URI = (char *) ONENET_CALLOC(1, ONENET_CON_URI_LEN);
     if (URI == NULL)
     {
-        log_e("onenet get datastreams failed! No memory for URI buffer!");
+        LOG_E("onenet get datastreams failed! No memory for URI buffer!");
         result = -RT_ENOMEM;
         goto __exit;
     }
@@ -781,7 +792,7 @@ rt_err_t onenet_http_get_datastream(const char *ds_name, struct rt_onenet_ds_inf
     rec_buf = (unsigned char *) ONENET_CALLOC(1, ONENET_RECV_RESP_LEN);
     if (rec_buf == NULL)
     {
-        log_e("onenet get datastreams failed! No memory for response data buffer!");
+        LOG_E("onenet get datastreams failed! No memory for response data buffer!");
         result = -RT_ENOMEM;
         goto __exit;
     }
@@ -808,7 +819,7 @@ rt_err_t onenet_http_get_datastream(const char *ds_name, struct rt_onenet_ds_inf
 
     if (res_len > ONENET_HTTP_HEAD_LEN)
     {
-        log_e("response data length(%d) is greater than the default recv buffer size(%d)!", res_len, ONENET_RECV_RESP_LEN);
+        LOG_E("response data length(%d) is greater than the default recv buffer size(%d)!", res_len, ONENET_RECV_RESP_LEN);
         goto __exit;
     }
     else if (webclient_read(session, rec_buf, ONENET_RECV_RESP_LEN) > 0)
